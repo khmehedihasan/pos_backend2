@@ -34,18 +34,100 @@ exports.addCategory = async (req,res,next)=>{
 
 exports.allCategory = async (req,res,next)=>{
     try{
+        const page = parseInt(req.query.page);
+        const limit = parseInt(req.query.limit);
+        const skip = (page-1) * limit;
+        const result = {};
+        result.totalData = await Category.countDocuments();
+        result.totalPage = Math.ceil(await Category.countDocuments()/limit);
+        result.data = []
 
-        const data = await Category.find().select({__v:0}).populate('subCategorys','name description img');
-        if(data.length<1){
+        result.previous = {
+            page: page-1,
+            limit
+        }
+
+        if(page == result.totalPage){
+            result.next = {
+                page: 0,
+                limit
+            }    
+        }else{
+            result.next = {
+                page: page+1,
+                limit
+            }
+        }
+
+        result.data = await Category.find().select({__v:0}).populate('subCategorys','name description').limit(limit).skip(skip);
+
+        if(result.totalData<1){
             res.status(400).send({status:false,message:"Category not found."});
         }else{
-            res.json({status:true,data});
+            res.json({status:true,result});
         }
 
     }catch(error){
         next(error);
     }
 }
+
+
+//---------------------------------------------------search Category--------------------------------------------------------
+
+exports.searchCategory = async (req,res,next)=>{
+    try{
+
+
+        const dcount = await Category.find({"$or":[
+            {name: { $regex: req.query.search, $options: 'i' } },
+            {description: { $regex: req.query.search, $options: 'i' } }
+        ]}).count();
+
+        if(dcount<1){
+            res.status(400).send({status:false,message:"Category not found."});
+        }else{
+            const page = parseInt(req.query.page);
+            const limit = parseInt(req.query.limit);
+            const skip = (page-1) * limit;
+            const result = {};
+            result.data = []
+
+
+            result.data = await Category.find({"$or":[
+                {name: { $regex: req.query.search, $options: 'i' } },
+                {description: { $regex: req.query.search, $options: 'i' } }
+            ]}).select({__v:0}).populate('subCategorys','name description').limit(limit).skip(skip);
+
+            result.totalData = dcount;
+            result.totalPage = Math.ceil(dcount/limit);
+
+
+            result.previous = {
+                page: page-1,
+                limit
+            }
+    
+            if(page == result.totalPage){
+                result.next = {
+                    page: 0,
+                    limit
+                }    
+            }else{
+                result.next = {
+                    page: page+1,
+                    limit
+                }
+            }
+
+            res.json({status:true,result});
+        }
+
+    }catch(error){
+        next(error);
+    }
+}
+
 
 //-------------------------------------------------------------single Category-------------------------------------------------
 
