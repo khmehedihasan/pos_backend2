@@ -8,12 +8,6 @@ const categorySchema = mongoose.Schema({
     description:{
         type:String,
     },
-    photo:{
-        type:String,
-    },
-    img:{
-        type:String,
-    },
     subCategorys:[
         {
             type: mongoose.Types.ObjectId,
