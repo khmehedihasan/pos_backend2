@@ -1,6 +1,6 @@
 const SubCategory = require('../Models/SubCategory');
 const Category = require('../Models/Category');
-const fs = require('fs');
+const mongoose = require('mongoose')
 
 
 //-------------------------------------------------------add SubCategory------------------------------------------------
@@ -8,15 +8,12 @@ const fs = require('fs');
 exports.addSubCategory = async (req,res,next)=>{
     try{
 
-
         const data = await SubCategory({
             name:req.body.name,
             description:req.body.description,
             category: req.body.categoryId
         });
     
-
-
         const d = await data.save();
 
         if(d != {}){
@@ -37,18 +34,167 @@ exports.addSubCategory = async (req,res,next)=>{
 
 exports.allSubCategory = async (req,res,next)=>{
     try{
+
+        const page = parseInt(req.query.page);
+        const limit = parseInt(req.query.limit);
+        const skip = (page-1) * limit;
+        const result = {};
+        result.totalData = await SubCategory.countDocuments();
+        result.data = []
+
+
+        if(limit == 0){
+            result.totalPage = 1;
+        }else{
+            result.totalPage = Math.ceil(await SubCategory.countDocuments()/limit);
+        }
+
+        result.previous = {
+            page: page-1,
+            limit
+        }
+        if(page == result.totalPage){
+            result.next = {
+                page: 0,
+                limit
+            }    
+        }
+
+        else{
+            result.next = {
+                page: page+1,
+                limit
+            }
+        }
+
         
-        const data = await SubCategory.find().select({__v:0}).populate('category products','name description img salePrice purchasePrice');
-        if(data.length<1){
+        result.data = await SubCategory.find().select({__v:0}).populate('category products','name description img salePrice purchasePrice').limit(limit).skip(skip);
+
+        if(result.totalData<1){
             res.status(404).send({status:false,message:"Brand not found."});
         }else{
-            res.json({status:true,data});
+            res.json({status:true,result});
         }
 
     }catch(error){
         next(error);
     }
 }
+
+
+//---------------------------------------------------search Category--------------------------------------------------------
+
+exports.searchSubCategory = async (req,res,next)=>{
+    try{
+
+
+        if(mongoose.isValidObjectId(req.query.search)){
+            
+            const dcount = await SubCategory.find({category: req.query.search }).count();
+            
+    
+            if(dcount<1){
+                res.status(400).send({status:false,message:"Brand not found."});
+            }else{
+                const page = parseInt(req.query.page);
+                const limit = parseInt(req.query.limit);
+                const skip = (page-1) * limit;
+                const result = {};
+                result.data = []
+    
+    
+                result.data = await SubCategory.find({category: req.query.search }).select({__v:0}).populate('category products','name description').limit(limit).skip(skip);
+    
+                result.totalData = dcount;
+    
+                if(limit == 0){
+                    result.totalPage = 1;
+                }else{
+                    result.totalPage = Math.ceil(dcount/limit);
+                }
+    
+                result.previous = {
+                    page: page-1,
+                    limit
+                }
+        
+                if(page == result.totalPage){
+                    result.next = {
+                        page: 0,
+                        limit
+                    }    
+                }else{
+                    result.next = {
+                        page: page+1,
+                        limit
+                    }
+                }
+    
+                res.json({status:true,result});
+            } 
+
+
+        }else{
+
+            const dcount = await SubCategory.find({"$or":[
+                {name: { $regex: req.query.search, $options: 'i' } },
+                {description: { $regex: req.query.search, $options: 'i' } }
+            ]}).count();
+            
+    
+            if(dcount<1){
+                res.status(400).send({status:false,message:"Brand not found."});
+            }else{
+                const page = parseInt(req.query.page);
+                const limit = parseInt(req.query.limit);
+                const skip = (page-1) * limit;
+                const result = {};
+                result.data = []
+    
+    
+                result.data = await SubCategory.find({"$or":[
+                    {name: { $regex: req.query.search, $options: 'i' } },
+                    {description: { $regex: req.query.search, $options: 'i' } }
+                ]}).select({__v:0}).populate('category products','name description').limit(limit).skip(skip);
+    
+                result.totalData = dcount;
+    
+                if(limit == 0){
+                    result.totalPage = 1;
+                }else{
+                    result.totalPage = Math.ceil(dcount/limit);
+                }
+    
+                result.previous = {
+                    page: page-1,
+                    limit
+                }
+        
+                if(page == result.totalPage){
+                    result.next = {
+                        page: 0,
+                        limit
+                    }    
+                }else{
+                    result.next = {
+                        page: page+1,
+                        limit
+                    }
+                }
+    
+                res.json({status:true,result});
+            } 
+
+        }
+
+
+
+
+    }catch(error){
+        next(error);
+    }
+}
+
 
 //-------------------------------------------------------------single SubCategory-------------------------------------------------
 
@@ -120,7 +266,7 @@ exports.deleteSubCategory = async (req,res,next)=>{
         }else{
             const products = d.products.length;
             if(products > 0){
-                res.status(400).send({status:false,message:`${products} product found under this category. So, can not delete this Brand.`});
+                res.status(400).send({status:false,message:`${products} product found under this Brand. So, can not delete this Brand.`});
             }else{
 
                 const data = await SubCategory.findByIdAndDelete(req.params.id);
