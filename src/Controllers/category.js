@@ -1,6 +1,5 @@
 require('dotenv').config();
 const Category = require('../Models/Category');
-const fs = require('fs');
 
 
 //-------------------------------------------------------add Category------------------------------------------------
@@ -39,20 +38,27 @@ exports.allCategory = async (req,res,next)=>{
         const skip = (page-1) * limit;
         const result = {};
         result.totalData = await Category.countDocuments();
-        result.totalPage = Math.ceil(await Category.countDocuments()/limit);
         result.data = []
+
+
+        if(limit == 0){
+            result.totalPage = 1;
+        }else{
+            result.totalPage = Math.ceil(await Category.countDocuments()/limit);
+        }
 
         result.previous = {
             page: page-1,
             limit
         }
-
         if(page == result.totalPage){
             result.next = {
                 page: 0,
                 limit
             }    
-        }else{
+        }
+
+        else{
             result.next = {
                 page: page+1,
                 limit
@@ -100,8 +106,12 @@ exports.searchCategory = async (req,res,next)=>{
             ]}).select({__v:0}).populate('subCategorys','name description').limit(limit).skip(skip);
 
             result.totalData = dcount;
-            result.totalPage = Math.ceil(dcount/limit);
 
+            if(limit == 0){
+                result.totalPage = 1;
+            }else{
+                result.totalPage = Math.ceil(dcount/limit);
+            }
 
             result.previous = {
                 page: page-1,
