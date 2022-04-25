@@ -5,6 +5,7 @@ const validObjectId = require('../Middlewares/validObjectId');
 const cheackToken = require('../Middlewares/cheackToken');
 
 router.get('/', cheackToken, category.allCategory);
+
 router.get('/search', cheackToken, category.searchCategory);
 
 router.get('/:id', cheackToken, validObjectId ,category.singleCategory);
