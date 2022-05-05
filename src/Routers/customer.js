@@ -7,6 +7,8 @@ const cheackToken = require('../Middlewares/cheackToken');
 
 router.get('/', cheackToken, customer.allCustomer);
 
+router.get('/search', cheackToken, customer.searchCustomer);
+
 router.get('/:id', cheackToken, validObjectId, customer.singleCustomer);
 
 router.post('/', cheackToken, uploadPhoto.single('photo'), customer.addCustomer)
