@@ -42,6 +42,8 @@ app.use('/category', require('./src/Routers/category'));
 
 app.use('/subCategory', require('./src/Routers/subCategory'));
 
+app.use('/unit', require('./src/Routers/unit'));
+
 app.use('/product', require('./src/Routers/product'));
 
 app.use('/purchase', require('./src/Routers/purchase'));
