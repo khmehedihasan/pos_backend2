@@ -78,13 +78,109 @@ exports.addCustomer = async (req,res,next)=>{
 
 exports.allCustomer = async (req,res,next)=>{
     try{
-        const data = await Customer.find().select({__v:0}).populate('sales','product receivable received due quantity date');
-        if(data.length<1){
+        const page = parseInt(req.query.page);
+        const limit = parseInt(req.query.limit);
+        const skip = (page-1) * limit;
+        const result = {};
+        result.totalData = await Customer.countDocuments();
+        result.data = []
+
+
+        if(limit == 0){
+            result.totalPage = 1;
+        }else{
+            result.totalPage = Math.ceil(await Customer.countDocuments()/limit);
+        }
+
+        result.previous = {
+            page: page-1,
+            limit
+        }
+        if(page == result.totalPage){
+            result.next = {
+                page: 0,
+                limit
+            }    
+        }
+
+        else{
+            result.next = {
+                page: page+1,
+                limit
+            }
+        }
+
+        result.data = await Customer.find().select({__v:0}).populate('sales','product payable payed due quantity date').limit(limit).skip(skip);;
+        
+        if(result.totalData<1){
             res.status(404).send({status:false,message:"Customer not found."});
         }else{
-            res.json({status:true,data});
+            res.json({status:true,result});
         }
     }catch(errro){
+        next(error);
+    }
+}
+
+
+//---------------------------------------------------search Customer--------------------------------------------------------
+
+exports.searchCustomer = async (req,res,next)=>{
+    try{
+
+
+        const dcount = await Customer.find({"$or":[
+            {name: { $regex: req.query.search, $options: 'i' } },
+            {email: { $regex: req.query.search, $options: 'i' } },
+            {phone: { $regex: req.query.search, $options: 'i' } },
+            {address: { $regex: req.query.search, $options: 'i' } },
+        ]}).count();
+
+        if(dcount<1){
+            res.status(400).send({status:false,message:"Customer not found."});
+        }else{
+            const page = parseInt(req.query.page);
+            const limit = parseInt(req.query.limit);
+            const skip = (page-1) * limit;
+            const result = {};
+            result.data = []
+
+            result.data = await Customer.find({"$or":[
+                {name: { $regex: req.query.search, $options: 'i' } },
+                {email: { $regex: req.query.search, $options: 'i' } },
+                {phone: { $regex: req.query.search, $options: 'i' } },
+                {address: { $regex: req.query.search, $options: 'i' } },
+            ]}).select({__v:0}).populate('sales','product payable payed due quantity date').limit(limit).skip(skip);
+
+            result.totalData = dcount;
+
+            if(limit == 0){
+                result.totalPage = 1;
+            }else{
+                result.totalPage = Math.ceil(dcount/limit);
+            }
+
+            result.previous = {
+                page: page-1,
+                limit
+            }
+    
+            if(page == result.totalPage){
+                result.next = {
+                    page: 0,
+                    limit
+                }    
+            }else{
+                result.next = {
+                    page: page+1,
+                    limit
+                }
+            }
+
+            res.json({status:true,result});
+        }
+
+    }catch(error){
         next(error);
     }
 }
